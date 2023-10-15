@@ -44,7 +44,7 @@ api.get("/categories/:id", async (c) => {
   try {
     const id = c.req.param("id");
     let { results } = await c.env.DB.prepare(
-      "SELECT * FROM categories WHERE id = ? ORDER BY id DESC"
+      "SELECT * FROM categories WHERE id = ?"
     )
       .bind(id)
       .all();
@@ -187,6 +187,23 @@ api.get("/events", async (c) => {
   }
 });
 
+api.get("/events/:id", async (c) => {
+  try {
+    const id = c.req.param("id");
+    let { results } = await c.env.DB.prepare(
+      "SELECT * FROM events WHERE id = ?"
+    )
+      .bind(id)
+      .all();
+    if (results.length == 0) {
+      return c.json({ err: "NOT FOUND" }, 404);
+    }
+    return c.json(results[0]);
+  } catch (e) {
+    console.error(e);
+    return c.json({ err: e }, 500);
+  }
+});
 // api.get("/events/:id", async (c) => {
 //   try {
 //     const id = c.req.param("id");
