@@ -19,19 +19,17 @@ api.get("/version", async (c) => {
     let results = await c.env.DB.prepare("SELECT * FROM versions").first();
     return c.json(results);
   } catch (e) {
-    console.error(e)
+    console.error(e);
     return c.json({ err: e }, 500);
   }
 });
-
-// Events
 
 // Categories
 
 api.get("/categories", async (c) => {
   try {
     let { results } = await c.env.DB.prepare(
-      "SELECT * FROM categories ORDER BY id DESC"
+      "SELECT c.* FROM categories c, events e where e.status = 1 AND e.id_category = c.id GROUP BY c.id ORDER BY id DESC"
     ).all();
     return c.json(results);
   } catch (e) {
@@ -131,7 +129,7 @@ api.delete("/categories/:id", async (c) => {
   }
 });
 
-// events
+// Events
 
 async function getTotalEvents(
   c: Context,
@@ -149,7 +147,7 @@ async function getTotalEvents(
   }
 }
 
-api.get("/events", async (c) => {
+api.get("/lives", async (c) => {
   try {
     const page = c.req.query("page") ? parseInt(c.req.query("page")) : 1;
     const idCategory = c.req.query("category")
@@ -173,7 +171,7 @@ api.get("/events", async (c) => {
     );
     const totalPages = total ? Math.round(total / ROWS_BY_PAGE) : 0;
     const query = `
-    SELECT id, description, title, subtitle, id_category, poster_path, backdrop_path, url, "key", key2, id_type, country
+    SELECT id, description, title, subtitle, id_category, poster_path, backdrop_path, url, "key", key2, id_type
      FROM events where id_category = ? and status = 1 and (country like ? or country like '%general%') ORDER BY id DESC LIMIT ${ROWS_BY_PAGE} OFFSET ${offset}`;
 
     let { results } = await c.env.DB.prepare(query)
@@ -186,7 +184,7 @@ api.get("/events", async (c) => {
   }
 });
 
-api.get("/events/:id", async (c) => {
+api.get("/lives/:id", async (c) => {
   try {
     const id = c.req.param("id");
     let { results } = await c.env.DB.prepare(
@@ -198,6 +196,40 @@ api.get("/events/:id", async (c) => {
       return c.json({ err: "NOT FOUND" }, 404);
     }
     return c.json(results[0]);
+  } catch (e) {
+    console.error(e);
+    return c.json({ err: e }, 500);
+  }
+});
+
+api.get("/events", async (c) => {
+  try {
+    const page = c.req.query("page") ? parseInt(c.req.query("page")) : 1;
+    const idCategory = 2;
+    const country = c.req.query("country") ? c.req.query("country") : null;
+    if (!idCategory || !country) {
+      return c.json(
+        { code: 400, message: "Query params: country is mandatory!" },
+        400
+      );
+    }
+
+    const offset = ROWS_BY_PAGE * (page - 1);
+
+    const filterGeneralCountry = `and (country like '%${country}%' or country like '%general%')`;
+    const total: number = await getTotalEvents(
+      c,
+      idCategory,
+      filterGeneralCountry
+    );
+    const query = `
+    SELECT id, description, title, subtitle, id_category, poster_path, backdrop_path, url, "key", key2, id_type
+     FROM events where id_category = ? and status = 1 and (country like ? or country like '%general%') ORDER BY id DESC`;
+
+    let { results } = await c.env.DB.prepare(query)
+      .bind(idCategory, `%${country}%`)
+      .all();
+    return c.json(results);
   } catch (e) {
     console.error(e);
     return c.json({ err: e }, 500);
