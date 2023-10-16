@@ -205,7 +205,7 @@ api.get("/lives/:id", async (c) => {
 api.get("/events", async (c) => {
   try {
     const page = c.req.query("page") ? parseInt(c.req.query("page")) : 1;
-    const idCategory = 2;
+    const idCategory = 1; // Eventos
     const country = c.req.query("country") ? c.req.query("country") : null;
     if (!idCategory || !country) {
       return c.json(
