@@ -330,24 +330,14 @@ api.delete("/lives/:id", async (c) => {
 
 api.get("/events", async (c) => {
   try {
-    const page = c.req.query("page") ? parseInt(c.req.query("page")) : 1;
     const idCategory = 1; // Eventos
     const country = c.req.query("country") ? c.req.query("country") : null;
-    if (!idCategory || !country) {
+    if (!country) {
       return c.json(
         { code: 400, message: "Query params: country is mandatory!" },
         400
       );
     }
-
-    const offset = ROWS_BY_PAGE * (page - 1);
-
-    const filterGeneralCountry = `and (country like '%${country}%' or country like '%general%')`;
-    const total: number = await getTotalEvents(
-      c,
-      idCategory,
-      filterGeneralCountry
-    );
     const query = `
     SELECT id, description, title, subtitle, id_category, poster_path, backdrop_path, url, "key", key2, id_type
      FROM events where id_category = ? and status = 1 and (country like ? or country like '%general%') ORDER BY id DESC`;
