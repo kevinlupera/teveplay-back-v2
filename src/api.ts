@@ -1,27 +1,30 @@
-import { Context, Hono } from "hono";
+import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { Bindings } from "./bindings";
 import {
   createCategory,
   createLive,
+  createMetadata,
   deleteCategory,
   deleteLive,
+  deleteMetadata,
   editVersion,
   findAllCategories,
   findAllLives,
+  findAllMetadata,
   findCategoryById,
   findEventsByFilters,
   findLiveById,
   findLivesByPage,
-  getDataDummy,
+  findMetadataById,
   getTotalEvents,
   getVersion,
   updateCategory,
   updateLive,
 } from "./query";
 import { ICategory } from "./ICategory";
-import { error } from "console";
 import { IEvent } from "./IEvents";
+import { IMetadata } from "./IMetadata";
 
 const ROWS_BY_PAGE: number = 10;
 const api = new Hono<{ Bindings: Bindings }>();
@@ -252,11 +255,10 @@ const formatResponse = (
 
 // Metadata
 
+
 api.get("/metadatas", async (c) => {
   try {
-    let { results } = await c.env.DB.prepare(
-      "SELECT c.* FROM metadatas c ORDER BY id DESC"
-    ).all();
+    let results = await findAllMetadata(c);
     return c.json(results);
   } catch (e) {
     console.error(e);
@@ -267,15 +269,11 @@ api.get("/metadatas", async (c) => {
 api.get("/metadatas/:id", async (c) => {
   try {
     const id = c.req.param("id") ? Number(c.req.param("id")) : null;
-    let { results } = await c.env.DB.prepare(
-      "SELECT * FROM metadatas WHERE id = ?"
-    )
-      .bind(id)
-      .all();
+    let results = await findMetadataById(c, id);
     if (results.length == 0) {
       return c.json({ error: "NOT FOUND" }, 404);
     }
-    return c.json(results[0]);
+    return c.json(results);
   } catch (e) {
     console.error(e);
     return c.json({ error: e }, 500);
@@ -284,17 +282,8 @@ api.get("/metadatas/:id", async (c) => {
 
 api.post("/metadatas", async (c) => {
   try {
-    const { url, key, key2, country, status }: any = await c.req.json();
-    let { results } = await c.env.DB.prepare(
-      "INSERT INTO metadatas (url, key, key2, country, status) VALUES (?, ?, ?, ?, ?) RETURNING id"
-    )
-      .bind(url, key, key2, country, status)
-      .all();
-    let result = await c.env.DB.prepare(
-      "SELECT * FROM metadatas WHERE id = ? ORDER BY id DESC"
-    )
-      .bind(results[0].id)
-      .first();
+    const metadata: IMetadata = await c.req.json();
+    let result = await createMetadata(c, metadata);
     return c.json(result);
   } catch (e) {
     console.error(e);
@@ -305,25 +294,13 @@ api.post("/metadatas", async (c) => {
 api.put("/metadatas/:id", async (c) => {
   try {
     const id = c.req.param("id") ? Number(c.req.param("id")) : null;
-    const { url, key, key2, country, status }: any = await c.req.json();
-    if (id != null) {
-      let { results } = await c.env.DB.prepare(
-        "SELECT id FROM metadatas WHERE id = ? ORDER BY id DESC"
-      )
-        .bind(id)
-        .all();
-      if (results.length == 0) {
-        return c.json({ error: "NOT FOUND" }, 404);
-      }
-    }
-
-    let { results } = await c.env.DB.prepare(
-      "UPDATE metadatas SET url = ?, key = ?, key2 = ?, country = ?, status = ? WHERE id = ? RETURNING *"
-    )
-      .bind(url, key, key2, country, status, id)
-      .all();
-    return c.json(results[0]);
+    const metadata: IMetadata = await c.req.json();
+    let result = await updateCategory(c, id, metadata);
+    return c.json(result);
   } catch (e) {
+    if (e?.code == "PGRST116") {
+      return c.json({ error: "NOT FOUND" }, 404);
+    }
     console.error(e);
     return c.json({ error: e }, 500);
   }
@@ -332,38 +309,16 @@ api.put("/metadatas/:id", async (c) => {
 api.delete("/metadatas/:id", async (c) => {
   try {
     const id = c.req.param("id") ? Number(c.req.param("id")) : null;
-    if (id != null) {
-      let { results } = await c.env.DB.prepare(
-        "SELECT id FROM metadatas WHERE id = ? ORDER BY id DESC"
-      )
-        .bind(id)
-        .all();
-      if (results.length == 0) {
-        return c.json({ error: "NOT FOUND" }, 404);
-      }
-    }
-    let { results } = await c.env.DB.prepare(
-      "DELETE FROM metadatas WHERE id = ? RETURNING 1"
-    )
-      .bind(id)
-      .all();
-    const success = results ? true : false;
+    await findMetadataById(c, id);
+    await deleteMetadata(c, id);
     return c.json({
-      code: success,
+      code: true,
       message: `Resource with ID: ${id} deleted`,
     });
-  } catch (e) {
-    console.error(e);
-    return c.json({ error: e }, 500);
-  }
-});
-
-// Version
-api.get("/countries", async (c) => {
-  try {
-    let results = await getDataDummy(c);
-    return c.json(results);
-  } catch (e) {
+  } catch (e: any) {
+    if (e?.code == "PGRST116") {
+      return c.json({ error: "NOT FOUND" }, 404);
+    }
     console.error(e);
     return c.json({ error: e }, 500);
   }

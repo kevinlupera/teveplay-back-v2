@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { ICategory } from "./ICategory";
 import { IEvent } from "./IEvents";
 import { count } from "console";
+import { IMetadata } from "./IMetadata";
 // require("dotenv").config();
 
 // const supabase = createClient(
@@ -104,9 +105,19 @@ export async function editVersion(c: Context, version: string) {
 
 export async function findAllLives(c: Context) {
   const supabase = createClient(c.env.SUPABASE_URL, c.env.SUPABASE_KEY);
-  const { data, error } = await supabase.from("events").select("");
+  const { data, error } = await supabase
+    .from("events_new")
+    .select(
+      "id, description, title, subtitle, id_category, poster_path, backdrop_path, id_type, metadatas!inner(url, key, key2, country)"
+    );
   if (error) throw error;
-  return data;
+  let results = [];
+  data.map((event) => {
+    const metadata = event?.metadatas;
+    delete event.metadatas;
+    results.push({ ...event, ...metadata });
+  });
+  return results;
 }
 
 export async function findLivesByPage(
@@ -118,47 +129,55 @@ export async function findLivesByPage(
 ) {
   const supabase = createClient(c.env.SUPABASE_URL, c.env.SUPABASE_KEY);
   const { data, error } = await supabase
-    .from("events")
+    .from("events_new")
     .select(
-      "id, description, title, subtitle, id_category, poster_path, backdrop_path, url, key, key2, id_type"
+      "id, description, title, subtitle, id_category, poster_path, backdrop_path, id_type, metadatas!inner(url, key, key2, country)"
     )
     .eq("id_category", idCategory)
     .eq("status", 1)
-    .or(`country.like.%${country}%,country.like.%general%`)
+    .or(`country.like.%${country}%,country.like.%general%`, {foreignTable: 'metadatas'})
     .range(start, offset)
     .limit(ROWS_BY_PAGE);
   if (error) throw error;
-  return data;
+  let results = [];
+  data.map((event) => {
+    const metadata = event?.metadatas;
+    delete event.metadatas;
+    results.push({ ...event, ...metadata });
+  });
+  return results;
 }
 
 export async function findLiveById(c: Context, id: Number) {
   const supabase = createClient(c.env.SUPABASE_URL, c.env.SUPABASE_KEY);
   const { data, error } = await supabase
-    .from("events")
-    .select("*")
+    .from("events_new")
+    .select(
+      "id, description, title, subtitle, id_category, poster_path, backdrop_path, id_type, metadatas!inner(url, key, key2, country)"
+    )
     .eq("id", id)
     .single();
   if (error) throw error;
-  return data;
+  let results = [];
+  const metadata = data?.metadatas;
+  delete data.metadatas;
+  results = { ...data, ...metadata };
+  return results;
 }
 
 export async function createLive(c: Context, event: IEvent) {
   const supabase = createClient(c.env.SUPABASE_URL, c.env.SUPABASE_KEY);
   const { error, data } = await supabase
-    .from("events")
+    .from("events_new")
     .insert({
       description: event.description,
       title: event.title,
       subtitle: event.subtitle,
       id_category: event.id_category,
+      id_metadata: event.id_metadata,
       poster_path: event.poster_path,
       backdrop_path: event.backdrop_path,
-      url: event.url,
-      key: event.key,
-      key2: event.key2,
       id_type: event.id_type,
-      country: event.country,
-      status: event.status,
     })
     .select()
     .single();
@@ -170,19 +189,16 @@ export async function createLive(c: Context, event: IEvent) {
 export async function updateLive(c: Context, id: Number, event: IEvent) {
   const supabase = createClient(c.env.SUPABASE_URL, c.env.SUPABASE_KEY);
   const { error, data } = await supabase
-    .from("events")
+    .from("events_new")
     .update({
       description: event.description,
       title: event.title,
       subtitle: event.subtitle,
       id_category: event.id_category,
+      id_metadata: event.id_metadata,
+      id_type: event.id_type,
       poster_path: event.poster_path,
       backdrop_path: event.backdrop_path,
-      url: event.url,
-      key: event.key,
-      key2: event.key2,
-      id_type: event.id_type,
-      country: event.country,
       status: event.status,
     })
     .eq("id", id)
@@ -195,7 +211,10 @@ export async function updateLive(c: Context, id: Number, event: IEvent) {
 
 export async function deleteLive(c: Context, id: Number) {
   const supabase = createClient(c.env.SUPABASE_URL, c.env.SUPABASE_KEY);
-  const { error, data } = await supabase.from("events").delete().eq("id", id);
+  const { error, data } = await supabase
+    .from("events_new")
+    .delete()
+    .eq("id", id);
 
   if (error) throw error;
   return data;
@@ -208,15 +227,21 @@ export async function findEventsByFilters(
 ) {
   const supabase = createClient(c.env.SUPABASE_URL, c.env.SUPABASE_KEY);
   const { data, error } = await supabase
-    .from("events")
+    .from("events_new")
     .select(
-      "id, description, title, subtitle, id_category, poster_path, backdrop_path, url, key, key2, id_type"
+      "id, description, title, subtitle, id_category, poster_path, backdrop_path, id_type, metadatas!inner(url, key, key2, country)"
     )
     .eq("status", 1)
     .eq("id_category", idCategory)
-    .or(`country.like.%${country}%,country.like.%general%`);
+    .or(`country.like.%${country}%,country.like.%general%`, {foreignTable: 'metadatas'})
   if (error) throw error;
-  return data;
+  let results = [];
+  data.map((event) => {
+    const metadata = event?.metadatas;
+    delete event.metadatas;
+    results.push({ ...event, ...metadata });
+  });
+  return results;
 }
 
 export async function getTotalEvents(
@@ -227,11 +252,11 @@ export async function getTotalEvents(
   try {
     const supabase = createClient(c.env.SUPABASE_URL, c.env.SUPABASE_KEY);
     const { count, error } = await supabase
-      .from("events")
+      .from("events_new")
       .select("*", { count: "exact", head: true })
       .eq("id_category", idCategory)
       .eq("status", 1)
-      .or(`country.like.%${country}%,country.like.%general%`);
+      .or(`country.like.%${country}%,country.like.%general%`, {foreignTable: 'metadatas'})
     if (error) throw error;
     return count;
   } catch (e) {
@@ -240,11 +265,72 @@ export async function getTotalEvents(
   }
 }
 
-// SUPABASE
-
-export async function getDataDummy(c: Context) {
+// Metadata
+export async function findAllMetadata(c: Context) {
   const supabase = createClient(c.env.SUPABASE_URL, c.env.SUPABASE_KEY);
-  const { data, error } = await supabase.from("countries").select("*");
+  const { data, error } = await supabase.from("metadatas").select("*");
+  if (error) throw error;
+  return data;
+}
+
+export async function findMetadataById(c: Context, id: Number) {
+  const supabase = createClient(c.env.SUPABASE_URL, c.env.SUPABASE_KEY);
+  const { data, error } = await supabase
+    .from("metadatas")
+    .select("*")
+    .eq("id", id)
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function createMetadata(c: Context, metadata: IMetadata) {
+  const supabase = createClient(c.env.SUPABASE_URL, c.env.SUPABASE_KEY);
+  const { error, data } = await supabase
+    .from("metadatas")
+    .insert({
+      key: metadata.key,
+      key2: metadata.key2,
+      url: metadata.url,
+      country: metadata.country,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function updateMetadata(
+  c: Context,
+  id: Number,
+  metadata: IMetadata
+) {
+  const supabase = createClient(c.env.SUPABASE_URL, c.env.SUPABASE_KEY);
+  const { error, data } = await supabase
+    .from("metadatas")
+    .update({
+      key: metadata.key,
+      key2: metadata.key2,
+      url: metadata.url,
+      country: metadata.country,
+      status: metadata.status,
+    })
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteMetadata(c: Context, id: Number) {
+  const supabase = createClient(c.env.SUPABASE_URL, c.env.SUPABASE_KEY);
+  const { error, data } = await supabase
+    .from("metadatas")
+    .delete()
+    .eq("id", id);
+
   if (error) throw error;
   return data;
 }

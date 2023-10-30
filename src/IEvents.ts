@@ -9,6 +9,7 @@ export interface IEvent{
     url?: String,
     key?: String,
     key2?: String,
+    id_metadata?: String,
     id_type?: String,
     country?: String,
     status?: String,
