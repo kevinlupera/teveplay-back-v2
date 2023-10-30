@@ -1,5 +1,6 @@
 import { Pool } from "pg";
 import { encryptData } from "./encryption.js";
+// import { createClient } from "@supabase/supabase-js";
 require("dotenv").config();
 
 const pool = new Pool({
@@ -268,6 +269,23 @@ const getVersion = async (request, response) => {
   }
 };
 
+// SUPA BASE
+
+// const getDataDummy = async (request, response) => {
+//   const supabase = createClient(
+//     process.env.SUPABASE_URL,
+//     process.env.SUPABASE_KEY
+//   );
+//   console.log("🚀 ~ file: query.js:277 ~ getDataDummy ~ supabase:", supabase);
+//   const { data, error } = await supabase.from("countries").select("*");
+//   if (error) throw error;
+//   return new Response(JSON.stringify(data), {
+//     headers: {
+//       "Content-Type": "application/json",
+//     },
+//   });
+// };
+
 export default {
   // Categories
   getCategories,
@@ -282,4 +300,6 @@ export default {
   deleteEvent,
   // Version
   getVersion,
+  // SUPABASE
+  // getDataDummy,
 };
