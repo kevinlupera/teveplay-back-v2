@@ -1,9 +1,11 @@
 export interface IMetadata{
     id?: bigint,
-    url?: String,
-    key?: String,
-    key2?: String,
-    country?: String,
+    title?: String,
+    description?: String,
+    subtitle?: String,
+    id_category?: String,
+    poster_path?: String,
+    backdrop_path?: String,
     status?: String,
     created_at?: String,
     updated_at?: String

@@ -1,4 +1,4 @@
-export interface IEvent{
+export interface IStream{
     id?: bigint,
     title?: String,
     description?: String,

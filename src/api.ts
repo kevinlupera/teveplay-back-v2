@@ -21,9 +21,10 @@ import {
   getVersion,
   updateCategory,
   updateLive,
+  updateMetadata,
 } from "./query";
 import { ICategory } from "./ICategory";
-import { IEvent } from "./IEvents";
+import { IStream } from "./IStream";
 import { IMetadata } from "./IMetadata";
 
 const ROWS_BY_PAGE: number = 10;
@@ -83,6 +84,9 @@ api.get("/categories/:id", async (c) => {
     }
     return c.json(results);
   } catch (e) {
+    if (e?.code == "PGRST116") {
+      return c.json({ error: "NOT FOUND" }, 404);
+    }
     console.error(e);
     return c.json({ error: e }, 500);
   }
@@ -182,7 +186,7 @@ api.get("/lives/:id", async (c) => {
 
 api.post("/lives", async (c) => {
   try {
-    const event: IEvent = await c.req.json();
+    const event: IStream = await c.req.json();
     let result = await createLive(c, event);
     return c.json(result);
   } catch (e) {
@@ -194,10 +198,13 @@ api.post("/lives", async (c) => {
 api.put("/lives/:id", async (c) => {
   try {
     const id = c.req.param("id") ? Number(c.req.param("id")) : null;
-    const event: IEvent = await c.req.json();
+    const event: IStream = await c.req.json();
     let result = await updateLive(c, id, event);
     return c.json(result);
   } catch (e) {
+    if (e?.code == "PGRST116") {
+      return c.json({ error: "NOT FOUND" }, 404);
+    }
     console.error(e);
     return c.json({ error: e }, 500);
   }
@@ -275,6 +282,9 @@ api.get("/metadatas/:id", async (c) => {
     }
     return c.json(results);
   } catch (e) {
+    if (e?.code == "PGRST116") {
+      return c.json({ error: "NOT FOUND" }, 404);
+    }
     console.error(e);
     return c.json({ error: e }, 500);
   }
@@ -295,7 +305,7 @@ api.put("/metadatas/:id", async (c) => {
   try {
     const id = c.req.param("id") ? Number(c.req.param("id")) : null;
     const metadata: IMetadata = await c.req.json();
-    let result = await updateCategory(c, id, metadata);
+    let result = await updateMetadata(c, id, metadata);
     return c.json(result);
   } catch (e) {
     if (e?.code == "PGRST116") {
