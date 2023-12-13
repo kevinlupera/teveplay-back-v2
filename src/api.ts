@@ -230,15 +230,12 @@ api.delete("/lives/:id", async (c) => {
 
 api.get("/events", async (c) => {
   try {
-    const idCategory = c.req.query("category")
-      ? Number(c.req.query("category"))
-      : null;
     const country = c.req.query("country") ? c.req.query("country") : null;
-    if (!country && !idCategory) {
+    if (!country ) {
       let results = await findAllLives(c);
       return c.json(results);
     }
-    let results = await findEventsByFilters(c, idCategory, country);
+    let results = await findEventsByFilters(c, country);
     return c.json(results);
   } catch (e) {
     console.error(e);

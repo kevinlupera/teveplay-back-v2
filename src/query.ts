@@ -15,7 +15,9 @@ const ROWS_BY_PAGE = 10;
 // Categories
 export async function findAllCategories(c: Context) {
   const supabase = createClient(c.env.SUPABASE_URL, c.env.SUPABASE_KEY);
-  const { data, error } = await supabase.from("categories").select("*");
+  const { data, error } = await supabase
+    .from('categories_final_view')
+    .select('*')
   if (error) throw error;
   return data;
 }
@@ -108,7 +110,8 @@ export async function findAllLives(c: Context) {
     .from("streams")
     .select(
       "id, url, key, key2, country, id_type, id_metadata, status, metadata!inner(description, title, subtitle, id_category, poster_path, backdrop_path)"
-    );
+    )
+    .eq("status", 1);
   if (error) throw error;
   let results = [];
   data.map((event) => {
@@ -207,29 +210,20 @@ export async function updateLive(c: Context, id: Number, event: IStream) {
 
 export async function deleteLive(c: Context, id: Number) {
   const supabase = createClient(c.env.SUPABASE_URL, c.env.SUPABASE_KEY);
-  const { error, data } = await supabase
-    .from("streams")
-    .delete()
-    .eq("id", id);
+  const { error, data } = await supabase.from("streams").delete().eq("id", id);
 
   if (error) throw error;
   return data;
 }
 
-export async function findEventsByFilters(
-  c: Context,
-  idCategory: number,
-  country: string
-) {
+export async function findEventsByFilters(c: Context, country: string) {
   const supabase = createClient(c.env.SUPABASE_URL, c.env.SUPABASE_KEY);
   const { data, error } = await supabase
     .from("streams")
     .select(
       "id, url, key, key2, country, id_type, id_metadata, status, metadata!inner(description, title, subtitle, id_category, poster_path, backdrop_path)"
     )
-    .eq("status", 1)
-    .eq("metadata.id_category", idCategory)
-    .or(`country.like.%${country}%,country.like.%general%`)
+    .or(`country.like.%${country}%,country.like.%general%`);
   if (error) throw error;
   let results = [];
   data.map((event) => {
@@ -252,7 +246,7 @@ export async function getTotalEvents(
       .select("*,metadata!inner(*)", { count: "exact", head: true })
       .eq("metadata.id_category", idCategory)
       .eq("status", 1)
-      .or(`country.like.%${country}%,country.like.%general%`)
+      .or(`country.like.%${country}%,country.like.%general%`);
     if (error) throw error;
     return count;
   } catch (e) {
@@ -327,10 +321,7 @@ export async function updateMetadata(
 
 export async function deleteMetadata(c: Context, id: Number) {
   const supabase = createClient(c.env.SUPABASE_URL, c.env.SUPABASE_KEY);
-  const { error, data } = await supabase
-    .from("metadata")
-    .delete()
-    .eq("id", id);
+  const { error, data } = await supabase.from("metadata").delete().eq("id", id);
 
   if (error) throw error;
   return data;
